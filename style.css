@@ -1,0 +1,48 @@
+/* ===== 1. Tokens ===== */
+:root{--bg:#0a1424;--panel:#101f38;--panel2:#16294a;--line:#24406b;--accent:#3d8bfd;--text:#e8eef9;--muted:#8fa3c4;--warn:#f5b84a;--r:14px}
+/* ===== 2. Base ===== */
+*{box-sizing:border-box;margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--accent);background:var(--accent);padding:.55rem .9rem;border-radius:10px}
+button.ghost{background:transparent;border-color:var(--line)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:.55rem .7rem;width:100%}
+/* ===== 3. Início (gavetas) ===== */
+.top{padding:1.6rem 1.2rem .8rem}
+.top h1{font-size:1.9rem;letter-spacing:.12em}
+.top p{color:var(--muted);margin-top:.2rem}
+#home{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;padding:1rem 1.2rem 2rem}
+.drawer{aspect-ratio:1;display:flex;align-items:flex-end;text-align:left;font-size:1.05rem;font-weight:600;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:1rem}
+.drawer:hover{border-color:var(--accent);background:var(--panel2)}
+/* ===== 4. Telas sobrepostas ===== */
+.screen{position:fixed;inset:0;background:var(--bg);overflow:auto;z-index:10}
+.screen>header{position:sticky;top:0;display:flex;align-items:center;gap:.8rem;padding:.8rem 1rem;background:var(--panel);border-bottom:1px solid var(--line);z-index:2}
+.screen h2{font-size:1.05rem}
+.x{width:2.3rem;height:2.3rem;padding:0;background:transparent;border-color:var(--line)}
+.body{padding:1rem;max-width:1000px;margin:auto}
+/* ===== 5. Hub de subgavetas ===== */
+.hub{position:relative;width:min(94vw,560px);aspect-ratio:1;margin:1rem auto}
+.core{position:absolute;left:50%;top:50%;width:30%;aspect-ratio:1;transform:translate(-50%,-50%);display:grid;place-items:center;text-align:center;font-weight:700;font-size:.95rem;background:var(--panel2);border:2px solid var(--accent);border-radius:var(--r);padding:.4rem}
+.orb{position:absolute;width:26%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;padding:.3rem;font-size:.78rem;line-height:1.15;background:var(--panel);border:1px solid var(--accent)}
+.orb:hover{background:var(--accent)}
+.orb.off{border:1px dashed var(--line);color:var(--muted);cursor:default;background:transparent}
+/* ===== 6. Planilhas ===== */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.7rem;margin-bottom:1rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:.8rem}
+.card small{color:var(--muted)}.card b{display:block;font-size:1.4rem;margin-top:.2rem}
+.card.warn b{color:var(--warn)}
+.bar{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.8rem}
+.bar input[type=search]{flex:1;min-width:140px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:.6rem .7rem;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--panel);color:var(--muted);font-weight:600}
+.act{text-align:right}.act button{padding:.25rem .5rem;margin-left:.2rem;background:transparent;border-color:var(--line)}
+.empty{text-align:center;color:var(--muted);padding:1.5rem}
+.log{margin-top:1rem;color:var(--muted);font-size:.85rem}.log li{margin-left:1rem}
+/* ===== 7. Diálogo ===== */
+dialog{margin:auto;width:min(92vw,420px);background:var(--panel);color:var(--text);border:1px solid var(--accent);border-radius:var(--r);padding:1.2rem}
+dialog::backdrop{background:rgba(3,8,18,.7)}
+dialog label{display:block;margin:.6rem 0;color:var(--muted);font-size:.85rem}
+dialog label>*{margin-top:.25rem;color:var(--text)}
+.row{display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem}
