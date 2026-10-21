@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C.F.O - Caixa de Ferramentas Operacional</title>
+<style>
+/* ===== 1. Tokens ===== */
+:root{--bg:#0a1424;--panel:#101f38;--panel2:#16294a;--line:#24406b;--accent:#3d8bfd;--text:#e8eef9;--muted:#8fa3c4;--warn:#f5b84a;--r:14px}
+/* ===== 2. Base ===== */
+*{box-sizing:border-box;margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--accent);background:var(--accent);padding:.55rem .9rem;border-radius:10px}
+button.ghost{background:transparent;border-color:var(--line)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:.55rem .7rem;width:100%}
+/* ===== 3. Início (gavetas) ===== */
+.top{padding:1.6rem 1.2rem .8rem}
+.top h1{font-size:1.9rem;letter-spacing:.12em}
+.top p{color:var(--muted);margin-top:.2rem}
+#home{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;padding:1rem 1.2rem 2rem}
+.drawer{aspect-ratio:1;display:flex;align-items:flex-end;text-align:left;font-size:1.05rem;font-weight:600;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:1rem}
+.drawer:hover{border-color:var(--accent);background:var(--panel2)}
+/* ===== 4. Telas sobrepostas ===== */
+.screen{position:fixed;inset:0;background:var(--bg);overflow:auto;z-index:10}
+.screen>header{position:sticky;top:0;display:flex;align-items:center;gap:.8rem;padding:.8rem 1rem;background:var(--panel);border-bottom:1px solid var(--line);z-index:2}
+.screen h2{font-size:1.05rem}
+.x{width:2.3rem;height:2.3rem;padding:0;background:transparent;border-color:var(--line)}
+.body{padding:1rem;max-width:1000px;margin:auto}
+/* ===== 5. Hub de subgavetas ===== */
+.hub{position:relative;width:min(94vw,560px);aspect-ratio:1;margin:1rem auto}
+.core{position:absolute;left:50%;top:50%;width:30%;aspect-ratio:1;transform:translate(-50%,-50%);display:grid;place-items:center;text-align:center;font-weight:700;font-size:.95rem;background:var(--panel2);border:2px solid var(--accent);border-radius:var(--r);padding:.4rem}
+.orb{position:absolute;width:26%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;padding:.3rem;font-size:.78rem;line-height:1.15;background:var(--panel);border:1px solid var(--accent)}
+.orb:hover{background:var(--accent)}
+.orb.off{border:1px dashed var(--line);color:var(--muted);cursor:default;background:transparent}
+/* ===== 6. Planilhas ===== */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.7rem;margin-bottom:1rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:.8rem}
+.card small{color:var(--muted)}.card b{display:block;font-size:1.4rem;margin-top:.2rem}
+.card.warn b{color:var(--warn)}
+.bar{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.8rem}
+.bar input[type=search]{flex:1;min-width:140px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:.6rem .7rem;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--panel);color:var(--muted);font-weight:600}
+.act{text-align:right}.act button{padding:.25rem .5rem;margin-left:.2rem;background:transparent;border-color:var(--line)}
+.empty{text-align:center;color:var(--muted);padding:1.5rem}
+.log{margin-top:1rem;color:var(--muted);font-size:.85rem}.log li{margin-left:1rem}
+/* ===== 7. Diálogo ===== */
+dialog{margin:auto;width:min(92vw,420px);background:var(--panel);color:var(--text);border:1px solid var(--accent);border-radius:var(--r);padding:1.2rem}
+dialog::backdrop{background:rgba(3,8,18,.7)}
+dialog label{display:block;margin:.6rem 0;color:var(--muted);font-size:.85rem}
+dialog label>*{margin-top:.25rem;color:var(--text)}
+.row{display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem}
+
+</style>
+</head>
+<body>
+<header class="top"><h1>C.F.O</h1><p>Caixa de Ferramentas Operacional</p></header>
+<main id="home"></main>
+<div id="screens"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ================= 1. NÚCLEO =================
+/* ===== Núcleo: utilitários, armazenamento, telas e diálogos ===== */
+const CFO = { modules: {}, screens: [] };
+
+CFO.esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Dados salvos no navegador (localStorage)
+CFO.store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem('cfo:' + k)) ?? d; } catch { return d; } },
+  set(k, v) { localStorage.setItem('cfo:' + k, JSON.stringify(v)); }
+};
+
+// Abre uma tela cobrindo a atual (com X para voltar)
+CFO.open = (title, render) => {
+  const s = document.createElement('section');
+  s.className = 'screen';
+  s.innerHTML = `<header><button class="x" aria-label="Voltar">✕</button><h2>${CFO.esc(title)}</h2></header><div class="body"></div>`;
+  s.querySelector('.x').onclick = CFO.close;
+  document.getElementById('screens').append(s);
+  CFO.screens.push(s);
+  render(s.querySelector('.body'));
+};
+CFO.close = () => CFO.screens.pop()?.remove();
+
+// Janela de formulário
+CFO.dialog = (title, fields, onOk) => {
+  const d = document.createElement('dialog');
+  d.innerHTML = `<form method="dialog"><h3>${CFO.esc(title)}</h3>${fields}
+    <div class="row"><button value="cancel" class="ghost" formnovalidate>Cancelar</button><button value="ok">Salvar</button></div></form>`;
+  d.onclose = () => {
+    if (d.returnValue === 'ok') onOk(Object.fromEntries(new FormData(d.querySelector('form'))));
+    d.remove();
+  };
+  document.body.append(d);
+  d.showModal();
+};
+
+
+// ================= 2. FÁBRICA DE PLANILHAS =================
+/* ===== Fábrica de planilhas: tabela + dashboard + importar/exportar =====
+   cfg: { key, columns:[{k,label,type,options}], dash(rows,movs), moves, qty } */
+CFO.sheet = cfg => body => {
+  const K = cfg.key, first = cfg.columns[0];
+  let rows = CFO.store.get(K, []), movs = CFO.store.get(K + ':mov', []), q = '';
+
+  const save = () => { CFO.store.set(K, rows); CFO.store.set(K + ':mov', movs); draw(); };
+  const clean = d => { cfg.columns.forEach(c => { if (c.type === 'number') d[c.k] = +d[c.k] || 0; }); return d; };
+  const field = (c, v = '') => c.options
+    ? `<label>${c.label}<select name="${c.k}">${c.options.map(o => `<option ${o == v ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`
+    : `<label>${c.label}<input name="${c.k}" type="${c.type || 'text'}" step="any" value="${CFO.esc(v)}" ${c === first ? 'required' : ''}></label>`;
+  const form = (r = {}) => cfg.columns.map(c => field(c, r[c.k])).join('');
+
+  function draw() {
+    const list = rows.filter(r => JSON.stringify(Object.values(r)).toLowerCase().includes(q));
+    body.innerHTML = `
+      <div class="cards">${cfg.dash(rows, movs).map(d => `<div class="card ${d[2] || ''}"><small>${d[0]}</small><b>${d[1]}</b></div>`).join('')}</div>
+      <div class="bar">
+        <input id="q" type="search" placeholder="Buscar..." value="${CFO.esc(q)}">
+        <button id="add">+ Adicionar</button>
+        <button id="imp" class="ghost">Importar</button>
+        <button id="exp" class="ghost">Exportar</button>
+        <input id="file" type="file" accept=".xlsx,.xls,.csv" hidden>
+      </div>
+      <div class="tw"><table><thead><tr>${cfg.columns.map(c => `<th>${c.label}</th>`).join('')}<th></th></tr></thead><tbody>
+        ${list.map(r => `<tr>${cfg.columns.map(c => `<td>${CFO.esc(r[c.k])}</td>`).join('')}
+          <td class="act">${cfg.moves ? `<button data-m="${r.id}" title="Entrada/Saída">⇅</button>` : ''}<button data-e="${r.id}" title="Editar">✎</button><button data-d="${r.id}" title="Excluir">🗑</button></td></tr>`).join('')
+          || '<tr><td colspan="99" class="empty">Nenhum registro. Adicione um item ou importe uma planilha.</td></tr>'}
+      </tbody></table></div>
+      ${cfg.moves && movs.length ? `<ul class="log"><b>Últimas movimentações</b>${movs.slice(-5).reverse().map(m => `<li>${m.tipo}: ${CFO.esc(m.item)} (${m.qtd}) - ${CFO.esc(m.resp)} - ${m.data.slice(0, 10)}</li>`).join('')}</ul>` : ''}`;
+    bind();
+  }
+
+  function bind() {
+    const $ = s => body.querySelector(s), find = id => rows.find(r => r.id === id);
+    $('#q').oninput = e => { q = e.target.value.toLowerCase(); draw(); const n = $('#q'); n.focus(); n.setSelectionRange(99, 99); };
+    $('#add').onclick = () => CFO.dialog('Novo registro', form(), d => { rows.push({ id: Date.now() + Math.random().toString(36).slice(2, 5), ...clean(d) }); save(); });
+    body.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { const r = find(b.dataset.e); CFO.dialog('Editar registro', form(r), d => { Object.assign(r, clean(d)); save(); }); });
+    body.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { if (confirm('Excluir este registro?')) { rows = rows.filter(r => r.id !== b.dataset.d); save(); } });
+    body.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
+      const r = find(b.dataset.m);
+      CFO.dialog('Movimentar: ' + r[first.k],
+        `<label>Tipo<select name="tipo"><option>Saída</option><option>Entrada</option></select></label>
+         <label>Quantidade<input name="qtd" type="number" min="1" required></label>
+         <label>Responsável<input name="resp"></label>`,
+        d => { const n = +d.qtd; r[cfg.qty] = (+r[cfg.qty] || 0) + (d.tipo === 'Entrada' ? n : -n);
+               movs.push({ item: r[first.k], tipo: d.tipo, qtd: n, resp: d.resp, data: new Date().toISOString() }); save(); });
+    });
+    $('#exp').onclick = () => {
+      const ws = XLSX.utils.json_to_sheet(rows.map(r => Object.fromEntries(cfg.columns.map(c => [c.label, r[c.k]]))));
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, K); XLSX.writeFile(wb, K + '.xlsx');
+    };
+    $('#imp').onclick = () => $('#file').click();
+    $('#file').onchange = async e => {
+      const f = e.target.files[0]; if (!f) return;
+      const wb = XLSX.read(await f.arrayBuffer());
+      const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '', raw: false });
+      json.forEach(j => {
+        const vals = Object.values(j), r = { id: Date.now() + Math.random().toString(36).slice(2, 6) };
+        cfg.columns.forEach((c, i) => { const key = Object.keys(j).find(h => h.trim().toLowerCase() === c.label.toLowerCase()); r[c.k] = key ? j[key] : vals[i] ?? ''; });
+        rows.push(clean(r));
+      });
+      save();
+    };
+  }
+  draw();
+};
+
+
+// ================= 3. MÓDULO: ALMOXARIFADO =================
+/* ===== Gaveta: Almoxarifado Operacional ===== */
+const dias = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+const hoje = () => dias(0);
+
+// Planilha de EPIs
+CFO.modules.epi = CFO.sheet({
+  key: 'epi', moves: true, qty: 'qtd',
+  columns: [
+    { k: 'item', label: 'Item' }, { k: 'ca', label: 'CA' }, { k: 'tam', label: 'Tamanho' },
+    { k: 'qtd', label: 'Estoque', type: 'number' }, { k: 'min', label: 'Estoque mínimo', type: 'number' }
+  ],
+  dash: (rows, movs) => {
+    const lim = dias(-30), rec = movs.filter(m => m.data.slice(0, 10) >= lim);
+    const soma = t => rec.filter(m => m.tipo === t).reduce((a, m) => a + m.qtd, 0);
+    return [['Itens cadastrados', rows.length], ['Estoque baixo', rows.filter(r => r.qtd <= r.min).length, 'warn'],
+            ['Entradas (30 dias)', soma('Entrada')], ['Saídas (30 dias)', soma('Saída')]];
+  }
+});
+
+// Planilha de contratos da empresa
+CFO.modules.contratos = CFO.sheet({
+  key: 'contratos',
+  columns: [
+    { k: 'nome', label: 'Contrato' }, { k: 'parte', label: 'Cliente/Fornecedor' },
+    { k: 'ini', label: 'Início', type: 'date' }, { k: 'fim', label: 'Término', type: 'date' },
+    { k: 'valor', label: 'Valor (R$)', type: 'number' },
+    { k: 'status', label: 'Status', options: ['Ativo', 'Suspenso', 'Encerrado'] }
+  ],
+  dash: rows => {
+    const at = rows.filter(r => r.status === 'Ativo');
+    return [['Contratos ativos', at.length],
+            ['Vencem em 30 dias', at.filter(r => r.fim >= hoje() && r.fim <= dias(30)).length, 'warn'],
+            ['Vencidos', at.filter(r => r.fim && r.fim < hoje()).length, 'warn'],
+            ['Valor ativo', 'R$ ' + at.reduce((a, r) => a + r.valor, 0).toLocaleString('pt-BR')]];
+  }
+});
+
+
+// ================= 4. GAVETAS E INÍCIO =================
+/* ===== Gavetas e tela inicial =====
+   Para criar uma subgaveta nova: registre o módulo em js/modules/ e adicione { name, m } em subs. */
+const DRAWERS = [
+  { name: 'Almoxarifado Operacional', short: 'Almox. Op.',
+    subs: [{ name: 'Planilha EPI', m: 'epi' }, { name: 'Contratos ativos', m: 'contratos' }] },
+  { name: 'Jurídico Operacional', short: 'Jurídico Op.', subs: [] },
+  { name: 'Personalização', short: 'Person.', subs: [] }
+];
+
+// Quadrado central com círculos (subgavetas) ao redor
+function hub(d, body) {
+  const n = 6;
+  body.innerHTML = `<div class="hub"><div class="core">${d.short}</div>${Array.from({ length: n }, (_, i) => {
+    const s = d.subs[i], a = (-90 + i * 360 / n) * Math.PI / 180;
+    return `<button class="orb ${s ? '' : 'off'}" data-i="${i}" style="left:${50 + 36 * Math.cos(a)}%;top:${50 + 36 * Math.sin(a)}%">${s ? s.name : 'Em breve'}</button>`;
+  }).join('')}</div>`;
+  body.querySelectorAll('.orb:not(.off)').forEach(b => b.onclick = () => {
+    const s = d.subs[b.dataset.i];
+    CFO.open(s.name, CFO.modules[s.m]);
+  });
+}
+
+// Início
+const home = document.getElementById('home');
+DRAWERS.forEach(d => {
+  const b = document.createElement('button');
+  b.className = 'drawer'; b.textContent = d.name;
+  b.onclick = () => CFO.open(d.name, body => hub(d, body));
+  home.append(b);
+});
+
+</script>
+</body>
+</html>
